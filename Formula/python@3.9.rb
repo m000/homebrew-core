@@ -36,6 +36,7 @@ class PythonAT39 < Formula
   depends_on "openssl@1.1"
   depends_on "readline"
   depends_on "sqlite"
+  depends_on "tcl-tk"
   depends_on "xz"
 
   uses_from_macos "bzip2"
@@ -96,6 +97,12 @@ class PythonAT39 < Formula
     HOMEBREW_PREFIX/"lib/python#{version.major_minor}/site-packages"
   end
 
+  # Patch for using pkg-config to detect Tcl/Tk.
+  patch do
+    url "https://github.com/python/cpython/pull/23721.patch"
+    sha256 "b8c737a09c5b1543bba4e3e11c6218bf04984dd20eb0bc2b2a3aaa1d05b6571e"
+  end
+
   def install
     # Unset these so that installing pip and setuptools puts them where we want
     # and not into some other Python the user has installed.
@@ -132,10 +139,6 @@ class PythonAT39 < Formula
       # The setup.py looks at "-isysroot" to get the sysroot (and not at --sysroot)
       cflags  << "-isysroot #{MacOS.sdk_path}" << "-I#{MacOS.sdk_path}/usr/include"
       ldflags << "-isysroot #{MacOS.sdk_path}"
-      # For the Xlib.h, Python needs this header dir with the system Tk
-      # Yep, this needs the absolute path where zlib needed a path relative
-      # to the SDK.
-      cflags << "-I#{MacOS.sdk_path}/System/Library/Frameworks/Tk.framework/Versions/8.5/Headers"
     end
     # Avoid linking to libgcc https://mail.python.org/pipermail/python-dev/2012-February/116205.html
     args << "MACOSX_DEPLOYMENT_TARGET=#{MacOS.version}"
@@ -406,9 +409,7 @@ class PythonAT39 < Formula
     system "#{bin}/python#{version.major_minor}", "-c", "import _gdbm"
     system "#{bin}/python#{version.major_minor}", "-c", "import zlib"
     on_macos do
-      # Temporary failure on macOS 11.1 due to https://bugs.python.org/issue42480
-      # Reenable unconditionnaly once Apple fixes the Tcl/Tk issue
-      system "#{bin}/python#{version.major_minor}", "-c", "import tkinter; root = tkinter.Tk()" if MacOS.full_version < "11.1"
+      system "#{bin}/python#{version.major_minor}", "-c", "import tkinter; root = tkinter.Tk()"
     end
 
     # Verify that the selected DBM interface works
